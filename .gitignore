@@ -1,3 +1,10 @@
+.idea/
+
+*.aux
+*.dvi
+*.svg
+*.tex
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

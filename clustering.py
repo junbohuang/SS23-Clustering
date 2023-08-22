@@ -1,4 +1,8 @@
+import math
+
 from manim import *
+import numpy as np
+from scipy.stats import norm
 
 
 class ProblemRepresentation(Scene):
@@ -25,8 +29,8 @@ class ProblemRepresentation(Scene):
 
         # 2. we can view this table as our dataset, where we have rows, or individuals, and columns, or features.
         text_2_1 = Tex(r"We can call this table the dataset $\mathtt{x}$").next_to(table_1, DOWN, buff=0.3)
-        text_2_2 = Text(", where there are rows (individuals) and columns (features)",
-                        t2c={"rows (individuals)": BLUE,
+        text_2_2 = Text(", where there are rows (observations) and columns (features)",
+                        t2c={"rows (observations)": BLUE,
                              "columns (features)": RED},
                         font_size=34).next_to(text_2_1, DOWN, buff=0.1)
         text_2_3 = Tex(r'$\mathtt{x} =$').next_to(table_1, LEFT)
@@ -82,7 +86,7 @@ class ProblemRepresentation(Scene):
         self.wait(2)
 
         # 5. distance function
-        tex_5_1 = MathTex(r'd(x_i,x_j) = geodesic(x_1, x_2)', font_size=38, color=YELLOW).next_to(tex_4_2, 4*LEFT)
+        tex_5_1 = MathTex(r'd(x_i,x_j) = geodesic(x_i, x_j)', font_size=38, color=YELLOW).next_to(tex_4_2, 4*LEFT)
         self.play(Write(tex_5_1))
         self.wait(2)
 
@@ -94,7 +98,7 @@ class ProblemRepresentation(Scene):
                            [0.26, 0.66, "...", 0.73], [0.05, 0.74, "...", 0.11],
                            [0.54, 0.52, "...", 0.21]]).scale(0.7)
         # self.play(FadeTransform(matrix_3, matrix_6))
-        tex_6_1 = MathTex(r'd(x_i,x_j) = cosine(x_1, x_2)', font_size=42, color=YELLOW).next_to(tex_4_2, 6*LEFT + UP)
+        tex_6_1 = MathTex(r'd(x_i,x_j) = cosine(x_i, x_j)', font_size=42, color=YELLOW).next_to(tex_4_2, 6*LEFT + UP)
         text_6_1 = MathTex(r"f_1", font_size=42, color=BLUE).next_to(matrix_6.get_columns()[0], 4*UP)
         text_6_2 = MathTex(r"f_2", font_size=42, color=BLUE).next_to(matrix_6.get_columns()[1], 4*UP)
         text_6_3 = MathTex(r"f_m", font_size=42, color=BLUE).next_to(matrix_6.get_columns()[3], 4*UP)
@@ -195,12 +199,268 @@ class ProblemRepresentation(Scene):
             *[FadeOut(mob) for mob in self.mobjects]
             # All mobjects in the screen are saved in self.mobjects
         )
-        text_8_1 = Text("Curse of dimensionality \n\n "
-                        "the more features you have, \n"
-                        "the more data your need.",
+        text_8_1 = Text("Curse of dimensionality \n\n"
+                        "The more features you have, \n"
+                        "The more data your need to fill up the space.",
                         t2c={"features": BLUE,
                              "data": RED},
                         font_size=50)
         self.play(Write(text_8_1, run_time=2))
+        self.wait(2)
+        self.play(
+            *[FadeOut(mob) for mob in self.mobjects]
+            # All mobjects in the screen are saved in self.mobjects
+        )
+
+        # vis
+        line = NumberLine(
+            x_range=[-10, 10, 2],
+            length=13,
+            include_numbers=True,
+        )
+        dots_1d = [Dot([n - 3, 0, 0], color=YELLOW) for n in np.random.sample(50) * 10] + [
+            Dot([n + 3, 0, 0], color=YELLOW) for n in np.random.sample(50) * -10]
+        self.play(FadeIn(line))
+        self.play(Create(VGroup(*dots_1d)))
+        self.wait(2)
+
+        self.play(
+            *[FadeOut(mob) for mob in self.mobjects]
+            # All mobjects in the screen are saved in self.mobjects
+        )
+
+        plane = NumberPlane(
+            x_range=[-10, 10, 2],
+            y_range=[-10, 10, 2],
+            x_length=13,
+            y_length=10
+        )
+        dots_2d = [Dot([point[0], point[1], 0], color=YELLOW) for point in
+                   np.random.uniform(low=-5, high=5, size=(100, 2))]
+        self.play(FadeIn(plane))
+        self.play(Create(VGroup(*dots_2d)))
+        self.wait(2)
+
+
+class GMMs(Scene):
+    def PDF_normal(self, x, mu, sigma):
+        '''
+        General form of probability density function of univariate normal distribution
+        '''
+        return math.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
+
+    def construct(self):
+        grid = Axes(
+            x_range=[-2, 10, 2],  # step size determines num_decimal_places.
+            y_range=[-2, 10, 2],
+            x_length=8,
+            y_length=6,
+            axis_config={
+                "numbers_to_include": np.arange(-4, 11, 2),
+                "font_size": 24,
+            },
+            tips=False,
+        ).shift(0.4*DOWN + 2*LEFT)
+
+        # Labels for the x-axis and y-axis.
+        y_label = grid.get_y_axis_label("y", edge=LEFT, direction=LEFT, buff=0.4)
+        x_label = grid.get_x_axis_label("x")
+        grid_labels = VGroup(x_label, y_label)
+
+        mu_1 = 3.5
+        sigma_1 = 0.5
+        mu_2 = 3
+        sigma_2 = 0.7
+        mu_3 = 6
+        sigma_3 = 0.9
+        mu_4 = 7
+        sigma_4 = 0.7
+
+        gaussian_1_x = np.random.normal(mu_1, sigma_1, 30)
+        gaussian_1_y = np.random.normal(mu_2, sigma_2, 30)
+        gaussian_2_x = np.random.normal(mu_3, sigma_3, 50)
+        gaussian_2_y = np.random.normal(mu_4, sigma_4, 50)
+        dummy_1 = np.zeros(30)
+        dummy_2 = np.zeros(50)
+
+
+        dots_1 = [Dot(grid.c2p(*point), color=YELLOW) for point in list(map(lambda x, y, z:(x, y, z), gaussian_1_x, gaussian_1_y, dummy_1))]
+        dots_2 = [Dot(grid.c2p(*point), color=GREEN) for point in list(map(lambda x, y, z:(x, y, z), gaussian_2_x, gaussian_2_y, dummy_2))]
+
+        graphs = VGroup(*dots_1, *dots_2)
+        title = Title(
+            # spaces between braces to prevent SyntaxError
+            "Mixture of two Gaussians",
+            include_underline=False,
+            font_size=40,
+        ).shift(LEFT)
+        self.play(FadeIn(title, graphs, grid, grid_labels))
+
         self.wait()
 
+        # add text
+        text_group = VGroup()
+        formula = MathTex(r"\mathcal{X} \sim \mathcal{N}({{\mu}},{{\sigma}}^{2})").next_to(grid, RIGHT + UP)
+        formula[1].set_color(MAROON)  # mu
+        formula[3].set_color(PURPLE)  # sigma
+        text_group += formula
+
+        # first gaussian
+        tex_1 = MathTex(r"\mu_1")
+        tex_5 = MathTex(r"\sigma_1")
+        text_group += tex_1
+        text_group += tex_5
+        # second gaussian
+        tex_2 = MathTex(r"\mu_2")
+        tex_6 = MathTex(r"\sigma_2")
+        text_group += tex_2
+        text_group += tex_6
+        # third gaussian
+        tex_3 = MathTex(r"\mu_3")
+        tex_7 = MathTex(r"\sigma_3")
+        text_group += tex_3
+        text_group += tex_7
+        # forth gaussian
+        tex_4 = MathTex(r"\mu_4")
+        tex_8 = MathTex(r"\sigma_4")
+        text_group += tex_4
+        text_group += tex_8
+
+        # create variables
+        var_1 = Variable(float(mu_1), tex_1, num_decimal_places=3).next_to(formula, DOWN).scale(0.6)
+        var_1.value.set_color(MAROON)  # g1 x mu
+        var_1.label.set_color(YELLOW)  # g1 x mu
+        var_2 = Variable(float(mu_2), tex_2, num_decimal_places=3).next_to(var_1, DOWN).scale(0.6)
+        var_2.value.set_color(MAROON)  # g1 y mu
+        var_2.label.set_color(YELLOW)  # g1 y mu
+        var_3 = Variable(float(mu_3), tex_3, num_decimal_places=3).next_to(var_2, DOWN).scale(0.6)
+        var_3.value.set_color(MAROON)  # g2 x mu
+        var_3.label.set_color(GREEN)  # g2 x mu
+        var_4 = Variable(float(mu_4), tex_4, num_decimal_places=3).next_to(var_3, DOWN).scale(0.6)
+        var_4.value.set_color(MAROON)  # g2 y mu
+        var_4.label.set_color(GREEN)  # g2 y mu
+
+        var_5 = Variable(float(sigma_1), tex_5, num_decimal_places=3).next_to(var_1, RIGHT).scale(0.6)
+        var_5.value.set_color(PURPLE)  # g1 x sigma
+        var_5.label.set_color(YELLOW)  # g1 x sigma
+        var_6 = Variable(float(sigma_2), tex_6, num_decimal_places=3).next_to(var_2, RIGHT).scale(0.6)
+        var_6.value.set_color(PURPLE)  # g1 y sigma
+        var_6.label.set_color(YELLOW)  # g1 y sigma
+        var_7 = Variable(float(sigma_3), tex_7, num_decimal_places=3).next_to(var_3, RIGHT).scale(0.6)
+        var_7.value.set_color(PURPLE)  # g2 x sigma
+        var_7.label.set_color(GREEN)  # g2 x sigma
+        var_8 = Variable(float(sigma_4), tex_8, num_decimal_places=3).next_to(var_4, RIGHT).scale(0.6)
+        var_8.value.set_color(PURPLE)  # g2 y sigma
+        var_8.label.set_color(GREEN)  # g2 y sigma
+
+        text_group += var_1
+        text_group += var_2
+        text_group += var_3
+        text_group += var_4
+        text_group += var_5
+        text_group += var_6
+        text_group += var_7
+        text_group += var_8
+
+        self.add(text_group)
+        self.wait(0.5)
+
+        # add Gaussian
+        gaussian_curve_1 = always_redraw(
+            lambda: grid.plot(
+                lambda x: self.PDF_normal(x, var_1.value.get_value(), var_5.value.get_value()), color=YELLOW)
+        )
+
+        gaussian_curve_3 = always_redraw(
+            lambda: grid.plot(
+                lambda x: self.PDF_normal(x, var_3.value.get_value(), var_7.value.get_value()), color=GREEN)
+        )
+
+        self.play(Create(gaussian_curve_1),
+                  Create(gaussian_curve_3))
+        self.wait()
+
+        # move dots
+        gaussian_1_x_updated = np.random.normal(mu_1+1.500, sigma_1+0.3, 30)
+        gaussian_1_y_updated = np.random.normal(mu_2-1.200, sigma_2+1, 30)
+        gaussian_2_x_updated = np.random.normal(mu_3-1.500, sigma_3+0.5, 30)
+        gaussian_2_y_updated = np.random.normal(mu_4+1.300, sigma_4+0.3, 30)
+
+        dots_updated_1 = [Dot(grid.c2p(*point), color=YELLOW) for point in
+                          list(map(lambda x, y, z:(x, y, z), gaussian_1_x_updated, gaussian_1_y_updated, dummy_1))]
+        dots_updated_2 = [Dot(grid.c2p(*point), color=GREEN) for point in
+                          list(map(lambda x, y, z: (x, y, z), gaussian_2_x_updated, gaussian_2_y_updated, dummy_1))]
+
+        self.play(var_1.tracker.animate.set_value(mu_1+1.500),
+                  var_2.tracker.animate.set_value(mu_2-1.500),
+                  var_3.tracker.animate.set_value(mu_3-1.200),
+                  var_4.tracker.animate.set_value(mu_4+1.300),
+                  var_5.tracker.animate.set_value(sigma_1 + 0.3),
+                  var_6.tracker.animate.set_value(sigma_2 + 1),
+                  var_7.tracker.animate.set_value(sigma_3 + 0.5),
+                  var_8.tracker.animate.set_value(sigma_4 + 0.300),
+                  ReplacementTransform(VGroup(*dots_1), VGroup(*dots_updated_1)),
+                  ReplacementTransform(VGroup(*dots_2), VGroup(*dots_updated_2)))
+
+        self.wait(0.5)
+
+        self.play(
+            *[dot.animate.set_color(WHITE) for dot in graphs]
+        )
+
+        # GMM math
+        self.play(var_1.tracker.animate.set_value(1),
+                  var_2.tracker.animate.set_value(2),
+                  var_3.tracker.animate.set_value(4),
+                  var_4.tracker.animate.set_value(1),
+                  var_5.tracker.animate.set_value(0.1),
+                  var_6.tracker.animate.set_value(0.41),
+                  var_7.tracker.animate.set_value(0.8),
+                  var_8.tracker.animate.set_value(1.2))
+
+        self.play(graphs[0].animate.set_color(YELLOW))
+
+        # var_1 = Text(f"{'{0:.2f}'.format(graphs[0].get_x())}, "
+        #              f"{'{0:.2f}'.format(graphs[0].get_y())}").next_to(formula, DOWN).scale(0.6)
+        print(self.PDF_normal(1, var_1.value.get_value(), var_5.value.get_value()))
+        # gaussian_fn_1 = grid.plot(
+        #     lambda x: self.PDF_normal(x, var_1.value.get_value(), var_5.value.get_value()))
+        # gaussian_fn_2 = grid.plot(
+        #     lambda x: self.PDF_normal(x, var_3.value.get_value(), var_7.value.get_value()))
+        print(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1))
+        # v_line1 = grid.get_vertical_line(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1))
+        # v_line2 = grid.get_vertical_line(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_3))
+        lines = grid.get_lines_to_point(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1))
+        self.add(lines)
+        self.wait(2)
+        # show point coord
+        # var_1 = Variable(grid.input_to_graph_point(graphs[0].get_x(), gaussian_fn_1), tex_1, num_decimal_places=3).next_to(formula, DOWN).scale(0.6)
+
+
+class CurseOfDimensionality(Scene):
+    def construct(self):
+        line = NumberLine(
+            x_range=[-10, 10, 2],
+            length=13,
+            include_numbers=True,
+        )
+        dots_1d = [Dot([n-5, 0, 0], color=YELLOW) for n in np.random.sample(50)*10] + [Dot([n-5, 0, 0], color=YELLOW) for n in np.random.sample(50)*-10]
+        self.play(FadeIn(line))
+        self.play(Create(VGroup(*dots_1d)))
+        self.wait(2)
+
+        self.play(
+            *[FadeOut(mob) for mob in self.mobjects]
+            # All mobjects in the screen are saved in self.mobjects
+        )
+
+        plane = NumberPlane(
+            x_range=[-10, 10, 2],
+            y_range=[-10, 10, 2],
+            x_length=13,
+            y_length=10
+        )
+        dots_2d = [Dot([point[0], point[1], 0], color=YELLOW) for point in np.random.uniform(low=-5, high=5, size=(100,2))]
+        self.play(FadeIn(plane))
+        self.play(Create(VGroup(*dots_2d)))
+        self.wait(2)

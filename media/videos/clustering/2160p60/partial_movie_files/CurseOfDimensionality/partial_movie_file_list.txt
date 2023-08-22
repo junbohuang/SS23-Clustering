@@ -1,0 +1,8 @@
+# This file is used internally by FFMPEG.
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00000.mp4'
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00001.mp4'
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00002.mp4'
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00003.mp4'
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00004.mp4'
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00005.mp4'
+file 'file:/Users/hyperbolicjb/Projects/sems/teaching/SS23-Clustering/media/videos/clustering/2160p60/partial_movie_files/CurseOfDimensionality/uncached_00006.mp4'
