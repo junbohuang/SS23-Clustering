@@ -1,4 +1,5 @@
 import math
+import random
 
 from manim import *
 import numpy as np
@@ -249,6 +250,30 @@ class GMMs(Scene):
         '''
         return math.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (sigma * math.sqrt(2 * math.pi))
 
+    def static_dots(self, grid):
+        mu_1 = 2
+        sigma_1 = 0.8
+        mu_2 = 6
+        sigma_2 = 0.4
+        mu_3 = 4
+        sigma_3 = 0.6
+        mu_4 = 3
+        sigma_4 = 1.2
+        gaussian_1_x = np.random.normal(mu_1, sigma_1, 50)
+        gaussian_1_y = np.random.normal(mu_2, sigma_2, 50)
+        gaussian_2_x = np.random.normal(mu_3, sigma_3, 30)
+        gaussian_2_y = np.random.normal(mu_4, sigma_4, 30)
+        dummy_1 = np.zeros(50)
+        dummy_2 = np.zeros(30)
+        dots_1 = [Dot(grid.c2p(*point), color=YELLOW) for point in
+                  list(map(lambda x, y, z: (x, y, z), gaussian_1_x, gaussian_1_y, dummy_1))]
+        dots_2 = [Dot(grid.c2p(*point), color=GREEN) for point in
+                  list(map(lambda x, y, z: (x, y, z), gaussian_2_x, gaussian_2_y, dummy_2))]
+        curve_1 = grid.plot(lambda x: self.PDF_normal(x, mu_1, sigma_1), color=YELLOW)
+        curve_2 = grid.plot(lambda x: self.PDF_normal(x, mu_3, sigma_3), color=GREEN)
+        group_curve = VGroup(curve_1, curve_2)
+        return VGroup(*dots_1, *dots_2), group_curve
+
     def construct(self):
         grid = Axes(
             x_range=[-2, 10, 2],  # step size determines num_decimal_places.
@@ -267,185 +292,262 @@ class GMMs(Scene):
         x_label = grid.get_x_axis_label("x")
         grid_labels = VGroup(x_label, y_label)
 
-        mu_1 = 3.5
-        sigma_1 = 0.5
-        mu_2 = 3
-        sigma_2 = 0.7
-        mu_3 = 6
-        sigma_3 = 0.9
-        mu_4 = 7
-        sigma_4 = 0.7
+        mu_1 = ValueTracker(3.5)
+        sigma_1 = ValueTracker(0.5)
+        mu_2 = ValueTracker(3)
+        sigma_2 = ValueTracker(0.7)
+        mu_3 = ValueTracker(6)
+        sigma_3 = ValueTracker(0.9)
+        mu_4 = ValueTracker(7)
+        sigma_4 = ValueTracker(0.7)
 
-        gaussian_1_x = np.random.normal(mu_1, sigma_1, 30)
-        gaussian_1_y = np.random.normal(mu_2, sigma_2, 30)
-        gaussian_2_x = np.random.normal(mu_3, sigma_3, 50)
-        gaussian_2_y = np.random.normal(mu_4, sigma_4, 50)
-        dummy_1 = np.zeros(30)
-        dummy_2 = np.zeros(50)
+        updating_dots = VGroup()
+        dots_g1 = always_redraw(
+            lambda: VGroup(*[Dot(point=grid.c2p(np.random.normal(mu_1.get_value(), sigma_1.get_value()),
+                                       np.random.normal(mu_2.get_value(), sigma_2.get_value()),
+                                       0), color=YELLOW) for _ in range(50)])
+        )
+        dots_g2 = always_redraw(
+            lambda: VGroup(*[Dot(point=grid.c2p(np.random.normal(mu_3.get_value(), sigma_3.get_value()),
+                                                np.random.normal(mu_4.get_value(), sigma_4.get_value()),
+                                                0), color=GREEN) for _ in range(30)])
+        )
+        updating_dots.add(dots_g1, dots_g2)
 
-        dots_1 = [Dot(grid.c2p(*point), color=YELLOW) for point in list(map(lambda x, y, z:(x, y, z), gaussian_1_x, gaussian_1_y, dummy_1))]
-        dots_2 = [Dot(grid.c2p(*point), color=GREEN) for point in list(map(lambda x, y, z:(x, y, z), gaussian_2_x, gaussian_2_y, dummy_2))]
-
-        graphs = VGroup(*dots_1, *dots_2)
         title = Title(
-            # spaces between braces to prevent SyntaxError
             "Mixture of two Gaussians",
             include_underline=False,
             font_size=40,
         ).shift(LEFT)
-        self.play(FadeIn(title, graphs, grid, grid_labels))
+        self.play(FadeIn(title, grid, grid_labels))
+
+        # Text to display distrubtion mean
+        formula = MathTex(r"\mathcal{X} \sim \mathcal{N}({{\mu}},{{\sigma}}^{2})").to_edge(RIGHT + UP)
+
+        g1_x_mu_text = MathTex(r'\mu_x^1 = ').next_to(formula, DOWN + LEFT, buff=0.2).set_color(YELLOW)
+        g1_x_sigma_text = MathTex(r'\sigma_x^1 = ').next_to(g1_x_mu_text, RIGHT, buff=1.4).set_color(YELLOW)
+        g2_x_mu_text = MathTex(r'\mu_x^2 = ').next_to(g1_x_mu_text, DOWN, buff=0.2).set_color(GREEN)
+        g2_x_sigma_text = MathTex(r'\sigma_x^2 = ').next_to(g2_x_mu_text, RIGHT, buff=1.4).set_color(GREEN)
+
+        # Always redraw the decimal value for mu for each frame
+        g1_x_mu_value_text = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(mu_1.get_value())
+                .next_to(g1_x_mu_text, RIGHT, buff=0.2)
+                .set_color(YELLOW)
+        )
+        g1_x_sigma_value_text = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(sigma_1.get_value())
+                .next_to(g1_x_sigma_text, RIGHT, buff=0.2)
+                .set_color(YELLOW)
+        )
+        g2_x_mu_value_text = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(mu_3.get_value())
+                .next_to(g2_x_mu_text, RIGHT, buff=0.2)
+                .set_color(GREEN)
+        )
+        g2_x_sigma_value_text = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(sigma_3.get_value())
+                .next_to(g2_x_sigma_text, RIGHT, buff=0.2)
+                .set_color(GREEN)
+        )
+
+        g1_x = always_redraw(
+            lambda: grid.plot(
+                lambda x: self.PDF_normal(x, mu_1.get_value(), sigma_1.get_value()), color=YELLOW)
+        )
+        g2_x = always_redraw(
+            lambda: grid.plot(
+                lambda x: self.PDF_normal(x, mu_3.get_value(), sigma_3.get_value()), color=GREEN)
+        )
+        group_curves_1 = VGroup(g1_x, g2_x)
+        group_text_1 = VGroup(g1_x_mu_text, g1_x_sigma_text, g2_x_mu_text, g2_x_sigma_text, g1_x_mu_value_text, g1_x_sigma_value_text, g2_x_mu_value_text, g2_x_sigma_value_text, formula)
+        self.add(group_curves_1, group_text_1)
+        self.play(Create(updating_dots))
+
+        for _ in range(10):
+            self.play(mu_1.animate.set_value(random.uniform(-2,8)),
+                      mu_2.animate.set_value(random.uniform(-1,6)),
+                      mu_3.animate.set_value(random.uniform(-1,7)),
+                      mu_4.animate.set_value(random.uniform(1,7)),
+                      sigma_1.animate.set_value(random.uniform(0,2)),
+                      sigma_2.animate.set_value(random.uniform(0,2)),
+                      sigma_3.animate.set_value(random.uniform(0,3)),
+                      sigma_4.animate.set_value(random.uniform(0,2)))
+
+        self.wait(2)
+        self.play(FadeOut(updating_dots))
+        del updating_dots
+
+        static_dots, group_curve_2 = self.static_dots(grid)
+        initial_curve_1 = grid.plot(lambda x: self.PDF_normal(x, 1, 0.2), color=YELLOW)
+        initial_curve_2 = grid.plot(lambda x: self.PDF_normal(x, 2, 0.3), color=GREEN)
+        initial_curve_group = VGroup(initial_curve_1, initial_curve_2)
+        self.play(FadeIn(static_dots),
+                  ReplacementTransform(group_curves_1, initial_curve_group))
+        self.play(*[dot.animate.set_color(WHITE) for dot in static_dots])
+        responsibility = MathTex(
+            r"r_{nk} = \frac{\pi_k\mathcal{N}(x_n|\mu_k, \Sigma_k))}{\sum_{j=1}^K\pi_j\mathcal{N}(x_n|\mu_j, \Sigma_j)}").shift(4*RIGHT + 2*UP).scale(0.8)
+        new_title = Title("GMMs visual explanation (K=2)", include_underline=False, font_size=40).shift(LEFT)
+        self.play(ReplacementTransform(group_text_1, responsibility),
+                  ReplacementTransform(title, new_title))
 
         self.wait()
 
-        # add text
-        text_group = VGroup()
-        formula = MathTex(r"\mathcal{X} \sim \mathcal{N}({{\mu}},{{\sigma}}^{2})").next_to(grid, RIGHT + UP)
-        formula[1].set_color(MAROON)  # mu
-        formula[3].set_color(PURPLE)  # sigma
-        text_group += formula
+        # GMMs math
+        indices = ValueTracker(0)
+        dot = always_redraw(
+            lambda: static_dots[int(indices.get_value())].set_color(BLUE))
 
-        # first gaussian
-        tex_1 = MathTex(r"\mu_1")
-        tex_5 = MathTex(r"\sigma_1")
-        text_group += tex_1
-        text_group += tex_5
-        # second gaussian
-        tex_2 = MathTex(r"\mu_2")
-        tex_6 = MathTex(r"\sigma_2")
-        text_group += tex_2
-        text_group += tex_6
-        # third gaussian
-        tex_3 = MathTex(r"\mu_3")
-        tex_7 = MathTex(r"\sigma_3")
-        text_group += tex_3
-        text_group += tex_7
-        # forth gaussian
-        tex_4 = MathTex(r"\mu_4")
-        tex_8 = MathTex(r"\sigma_4")
-        text_group += tex_4
-        text_group += tex_8
-
-        # create variables
-        var_1 = Variable(float(mu_1), tex_1, num_decimal_places=3).next_to(formula, DOWN).scale(0.6)
-        var_1.value.set_color(MAROON)  # g1 x mu
-        var_1.label.set_color(YELLOW)  # g1 x mu
-        var_2 = Variable(float(mu_2), tex_2, num_decimal_places=3).next_to(var_1, DOWN).scale(0.6)
-        var_2.value.set_color(MAROON)  # g1 y mu
-        var_2.label.set_color(YELLOW)  # g1 y mu
-        var_3 = Variable(float(mu_3), tex_3, num_decimal_places=3).next_to(var_2, DOWN).scale(0.6)
-        var_3.value.set_color(MAROON)  # g2 x mu
-        var_3.label.set_color(GREEN)  # g2 x mu
-        var_4 = Variable(float(mu_4), tex_4, num_decimal_places=3).next_to(var_3, DOWN).scale(0.6)
-        var_4.value.set_color(MAROON)  # g2 y mu
-        var_4.label.set_color(GREEN)  # g2 y mu
-
-        var_5 = Variable(float(sigma_1), tex_5, num_decimal_places=3).next_to(var_1, RIGHT).scale(0.6)
-        var_5.value.set_color(PURPLE)  # g1 x sigma
-        var_5.label.set_color(YELLOW)  # g1 x sigma
-        var_6 = Variable(float(sigma_2), tex_6, num_decimal_places=3).next_to(var_2, RIGHT).scale(0.6)
-        var_6.value.set_color(PURPLE)  # g1 y sigma
-        var_6.label.set_color(YELLOW)  # g1 y sigma
-        var_7 = Variable(float(sigma_3), tex_7, num_decimal_places=3).next_to(var_3, RIGHT).scale(0.6)
-        var_7.value.set_color(PURPLE)  # g2 x sigma
-        var_7.label.set_color(GREEN)  # g2 x sigma
-        var_8 = Variable(float(sigma_4), tex_8, num_decimal_places=3).next_to(var_4, RIGHT).scale(0.6)
-        var_8.value.set_color(PURPLE)  # g2 y sigma
-        var_8.label.set_color(GREEN)  # g2 y sigma
-
-        text_group += var_1
-        text_group += var_2
-        text_group += var_3
-        text_group += var_4
-        text_group += var_5
-        text_group += var_6
-        text_group += var_7
-        text_group += var_8
-
-        self.add(text_group)
-        self.wait(0.5)
-
-        # add Gaussian
-        gaussian_curve_1 = always_redraw(
-            lambda: grid.plot(
-                lambda x: self.PDF_normal(x, var_1.value.get_value(), var_5.value.get_value()), color=YELLOW)
+        # selected point
+        selected_point_text = Tex(r'Selected point:', color=BLUE).shift(4*RIGHT + UP).scale(0.8)
+        selected_point_value_text_1 = always_redraw(
+                    lambda: DecimalNumber(num_decimal_places=2)
+                        .set_value(grid.p2c([dot.get_x(), dot.get_y(), 0])[0])
+                        .next_to(selected_point_text, DOWN, buff=0.2)
+                        .set_color(BLUE)
+                        .scale(0.8)
+                )
+        selected_point_value_text_2 = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(grid.p2c([dot.get_x(), dot.get_y(), 0])[1])
+                .next_to(selected_point_value_text_1, RIGHT, buff=0.2)
+                .set_color(BLUE)
+                .scale(0.8)
         )
 
-        gaussian_curve_3 = always_redraw(
-            lambda: grid.plot(
-                lambda x: self.PDF_normal(x, var_3.value.get_value(), var_7.value.get_value()), color=GREEN)
-        )
+        # intersecting point
+        lines_1 = always_redraw(lambda: grid.get_lines_to_point((dot.get_x(), dot.get_y(), 0)))
+        intersecting_point_text = Tex(r'Intersecting point:').shift(4*RIGHT).scale(0.8)
 
-        self.play(Create(gaussian_curve_1),
-                  Create(gaussian_curve_3))
+        intersecting_point_value_text_1 = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[0]))[0])
+                .next_to(intersecting_point_text, DOWN, buff=0.2)
+                .set_color(YELLOW)
+                .scale(0.8)
+        )
+        intersecting_point_value_text_2 = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[0]))[1])
+                .next_to(intersecting_point_value_text_1, RIGHT, buff=0.2)
+                .set_color(YELLOW)
+                .scale(0.8)
+        )
+        intersecting_point_value_text_3 = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[1]))[0])
+                .next_to(intersecting_point_text, 4*DOWN, buff=0.2)
+                .set_color(GREEN)
+                .scale(0.8)
+        )
+        intersecting_point_value_text_4 = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[1]))[1])
+                .next_to(intersecting_point_value_text_3, RIGHT, buff=0.2)
+                .set_color(GREEN)
+                .scale(0.8)
+        )
+        group_text_2 = VGroup(selected_point_text, selected_point_value_text_1, selected_point_value_text_2,
+                              intersecting_point_text, intersecting_point_value_text_1, intersecting_point_value_text_2,
+                              intersecting_point_value_text_3, intersecting_point_value_text_4)
+
+        self.play(ShowCreationThenFadeOut(lines_1))
+        self.add(group_text_2)
         self.wait()
 
-        # move dots
-        gaussian_1_x_updated = np.random.normal(mu_1+1.500, sigma_1+0.3, 30)
-        gaussian_1_y_updated = np.random.normal(mu_2-1.200, sigma_2+1, 30)
-        gaussian_2_x_updated = np.random.normal(mu_3-1.500, sigma_3+0.5, 30)
-        gaussian_2_y_updated = np.random.normal(mu_4+1.300, sigma_4+0.3, 30)
+        # responsibility display
+        responsibility_text = MathTex(r"r_1 =", color=BLUE).shift(3 * RIGHT + 3*DOWN).scale(0.8)
 
-        dots_updated_1 = [Dot(grid.c2p(*point), color=YELLOW) for point in
-                          list(map(lambda x, y, z:(x, y, z), gaussian_1_x_updated, gaussian_1_y_updated, dummy_1))]
-        dots_updated_2 = [Dot(grid.c2p(*point), color=GREEN) for point in
-                          list(map(lambda x, y, z: (x, y, z), gaussian_2_x_updated, gaussian_2_y_updated, dummy_1))]
+        # denominator
+        intersecting_point_value_text_2_target_copy = intersecting_point_value_text_2.copy()
+        intersecting_point_value_text_2_target_copy.generate_target()
+        intersecting_point_value_text_2_target_copy.target.next_to(responsibility_text, RIGHT + DOWN)
+        intersecting_point_value_text_4.generate_target()
+        intersecting_point_value_text_4.target.next_to(intersecting_point_value_text_2_target_copy.target, RIGHT, buff=0.5)
 
-        self.play(var_1.tracker.animate.set_value(mu_1+1.500),
-                  var_2.tracker.animate.set_value(mu_2-1.500),
-                  var_3.tracker.animate.set_value(mu_3-1.200),
-                  var_4.tracker.animate.set_value(mu_4+1.300),
-                  var_5.tracker.animate.set_value(sigma_1 + 0.3),
-                  var_6.tracker.animate.set_value(sigma_2 + 1),
-                  var_7.tracker.animate.set_value(sigma_3 + 0.5),
-                  var_8.tracker.animate.set_value(sigma_4 + 0.300),
-                  ReplacementTransform(VGroup(*dots_1), VGroup(*dots_updated_1)),
-                  ReplacementTransform(VGroup(*dots_2), VGroup(*dots_updated_2)))
-
-        self.wait(0.5)
-
-        self.play(
-            *[dot.animate.set_color(WHITE) for dot in graphs]
+        intersecting_point_value_text_2_copy_b = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(
+                grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[0]))[1])
+                .next_to(responsibility_text, RIGHT+DOWN, buff=0)
+                .set_color(YELLOW)
+                .scale(0.8)
         )
+        pi_text_1_b = MathTex(r"\pi_1+", color=YELLOW).next_to(intersecting_point_value_text_2_copy_b, RIGHT, buff=0)
+        intersecting_point_value_text_4_copy = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(
+                grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[1]))[1])
+                .next_to(pi_text_1_b, RIGHT)
+                .set_color(GREEN)
+                .scale(0.8)
+        )
+        pi_text_2 = MathTex(r"\pi_2", color=GREEN).next_to(intersecting_point_value_text_4_copy, RIGHT, buff=0)
 
-        # GMM math
-        self.play(var_1.tracker.animate.set_value(2),
-                  var_2.tracker.animate.set_value(6),
-                  var_3.tracker.animate.set_value(4),
-                  var_4.tracker.animate.set_value(3),
-                  var_5.tracker.animate.set_value(0.6),
-                  var_6.tracker.animate.set_value(0.41),
-                  var_7.tracker.animate.set_value(0.8),
-                  var_8.tracker.animate.set_value(1.2))
-        responsibility = MathTex(r"r_{nk} = \frac{\pi_k\mathcal{N}(x_n|\mu_k, \Sigma_k))}{\sum_{j=1}^K\pi_j\mathcal{N}(x_n|\mu_j, \Sigma_j)}").next_to(grid, RIGHT+UP).scale(0.6)
+        denominator_group = VGroup(intersecting_point_value_text_2_copy_b, pi_text_1_b,
+                                   pi_text_2, intersecting_point_value_text_4_copy)
 
-        self.play(Uncreate(text_group),
-                  Uncreate(title),
-                  Write(responsibility))
-        title = Title("GMMs visual explanation (K=2)", include_underline=False, font_size=40).to_edge(LEFT + UP)
-        self.add(title)
+        # line
+        line = Line(LEFT, RIGHT)
+        line.set_width(denominator_group.get_width() + 0.2)
+        line.next_to(denominator_group, UP, buff=0.1, aligned_edge=LEFT)
 
-        for i, dot in enumerate(graphs):
-            self.play(dot.animate.set_color(BLUE),)
-            points = grid.p2c([dot.get_x(), dot.get_y(), 0])
-            selected_point = Tex(fr"Selected point: \newline {np.round(points, decimals=2)}", color=BLUE).next_to(formula, DOWN).scale(0.6)
+        # numerator
+        intersecting_point_value_text_2.generate_target()
+        intersecting_point_value_text_2.target.next_to(line, UP, buff=0)
 
-            lines_1 = grid.get_lines_to_point((dot.get_x(), dot.get_y(), 0))
-            self.play(Create(lines_1), Create(selected_point))
-            # self.wait()
-            # show point coord
-            coords_1 = grid.p2c(grid.input_to_graph_point(dot.get_x(), gaussian_curve_1))
-            coords_2 = grid.p2c(grid.input_to_graph_point(dot.get_x(), gaussian_curve_3))
-            intersected_point = Tex(fr"Intersecting point: \newline ("
-                                    fr"{np.round(coords_1, decimals=2)[0]}, "
-                                    fr"{np.round(coords_1, decimals=2)[1]}), "
-                                    fr"({np.round(coords_2, decimals=2)[0]}, "
-                                    fr"{np.round(coords_2, decimals=2)[1]})", color=YELLOW).next_to(selected_point, DOWN).scale(0.6)
-            self.play(Create(intersected_point))
-            if i == 0:
-                self.wait(2)
-            else:
-                continue
-        # var_g_1 = Variable(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1), tex_1, num_decimal_places=3).next_to(formula, DOWN).scale(0.6)
+        intersecting_point_value_text_2_copy = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2)
+                .set_value(
+                grid.p2c(grid.input_to_graph_point(grid.p2c([dot.get_x(), dot.get_y(), 0])[0], initial_curve_group[0]))[1])
+                .next_to(line, UP)
+                .set_color(YELLOW)
+                .scale(0.8)
+        )
+        pi_text_1 = MathTex(r"\pi_1", color=YELLOW).next_to(intersecting_point_value_text_2_copy, RIGHT, buff=0)
+        numerator_group = VGroup(pi_text_1, intersecting_point_value_text_2_copy)
+
+        y1 = intersecting_point_value_text_2.copy()
+        y2 = intersecting_point_value_text_2_target_copy.copy()
+        y3 = intersecting_point_value_text_4.copy()
+        self.play(MoveToTarget(y1), MoveToTarget(y2), MoveToTarget(y3))
+        self.play(FadeOut(y1),
+                  FadeOut(y2),
+                  FadeOut(y3))
+        text_responsibility_update = VGroup(responsibility_text, numerator_group, line, denominator_group)
+        self.add(text_responsibility_update)
+        self.play(indices.animate.set_value(int(len(static_dots)) - 1), run_time=5)
+        self.play(*[dot.animate.set_color(BLUE) for dot in static_dots])
+        self.wait(2)
+
+        # E step
+        title_e_step = Title("EM Algorithm", include_underline=False, font_size=40).shift(LEFT)
+
+        self.play(FadeOut(group_text_2),
+                  FadeOut(responsibility),
+                  FadeOut(text_responsibility_update),
+                  ReplacementTransform(new_title, title_e_step))
+        tex_initialize = Tex(r"1. Initialize $\pi$, $\mu$, $\sigma$").shift(4*RIGHT + 2*UP).scale(0.7)
+        tex_e_step = Tex(r"2. Compute $r$").next_to(tex_initialize, DOWN).scale(0.7)
+        tex_m_step = Tex(r"3. Update  $\pi$, $\mu$, $\sigma$ given the new $r$").next_to(tex_e_step, DOWN).scale(0.7)
+        tex_repeat = Tex(r"4. Repeat until convergence.").next_to(tex_m_step, DOWN).scale(0.7)
+        self.play(Create(tex_initialize),
+                  Create(tex_e_step),
+                  Create(tex_m_step),
+                  Create(tex_repeat)
+                  )
+        self.wait(2)
+        initial_curve_1b = grid.plot(lambda x: self.PDF_normal(x, 1.5, 0.4), color=YELLOW)
+        initial_curve_2b = grid.plot(lambda x: self.PDF_normal(x, 3, 0.2), color=GREEN)
+        initial_curve_groupb = VGroup(initial_curve_1b, initial_curve_2b)
+        self.play(ReplacementTransform(initial_curve_group, initial_curve_groupb))
+        self.wait(2)
+        self.play(ReplacementTransform(initial_curve_groupb, group_curve_2))
+        self.wait(2)
 
 
 class CurseOfDimensionality(Scene):
