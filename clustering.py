@@ -15,7 +15,7 @@ class ProblemRepresentation(Scene):
         # 1. Introduction to the problem and representation we want - view table as dataset
         table_1 = Table(list(german_cities_data.values()),
                         row_labels=[Text(city, color=BLUE) for city in list(german_cities_data.keys())],
-                        col_labels=[Text("Latitude", color=RED), Text("Longtitude", color=RED)],
+                        col_labels=[Text("Latitude", color=RED), Text("Longitude", color=RED)],
                         v_buff=0.8).scale(0.6).shift(UP)
         text_1 = Text("Given a table of some cities, with their latitude and longitude.",
                         t2c={"cities": BLUE,
@@ -263,7 +263,7 @@ class GMMs(Scene):
         ).shift(0.4*DOWN + 2*LEFT)
 
         # Labels for the x-axis and y-axis.
-        y_label = grid.get_y_axis_label("y", edge=LEFT, direction=LEFT, buff=0.4)
+        y_label = grid.get_y_axis_label("y")
         x_label = grid.get_x_axis_label("x")
         grid_labels = VGroup(x_label, y_label)
 
@@ -282,7 +282,6 @@ class GMMs(Scene):
         gaussian_2_y = np.random.normal(mu_4, sigma_4, 50)
         dummy_1 = np.zeros(30)
         dummy_2 = np.zeros(50)
-
 
         dots_1 = [Dot(grid.c2p(*point), color=YELLOW) for point in list(map(lambda x, y, z:(x, y, z), gaussian_1_x, gaussian_1_y, dummy_1))]
         dots_2 = [Dot(grid.c2p(*point), color=GREEN) for point in list(map(lambda x, y, z:(x, y, z), gaussian_2_x, gaussian_2_y, dummy_2))]
@@ -409,32 +408,44 @@ class GMMs(Scene):
         )
 
         # GMM math
-        self.play(var_1.tracker.animate.set_value(1),
-                  var_2.tracker.animate.set_value(2),
+        self.play(var_1.tracker.animate.set_value(2),
+                  var_2.tracker.animate.set_value(6),
                   var_3.tracker.animate.set_value(4),
-                  var_4.tracker.animate.set_value(1),
-                  var_5.tracker.animate.set_value(0.1),
+                  var_4.tracker.animate.set_value(3),
+                  var_5.tracker.animate.set_value(0.6),
                   var_6.tracker.animate.set_value(0.41),
                   var_7.tracker.animate.set_value(0.8),
                   var_8.tracker.animate.set_value(1.2))
+        responsibility = MathTex(r"r_{nk} = \frac{\pi_k\mathcal{N}(x_n|\mu_k, \Sigma_k))}{\sum_{j=1}^K\pi_j\mathcal{N}(x_n|\mu_j, \Sigma_j)}").next_to(grid, RIGHT+UP).scale(0.6)
 
-        self.play(graphs[0].animate.set_color(YELLOW))
+        self.play(Uncreate(text_group),
+                  Uncreate(title),
+                  Write(responsibility))
+        title = Title("GMMs visual explanation (K=2)", include_underline=False, font_size=40).to_edge(LEFT + UP)
+        self.add(title)
 
-        # var_1 = Text(f"{'{0:.2f}'.format(graphs[0].get_x())}, "
-        #              f"{'{0:.2f}'.format(graphs[0].get_y())}").next_to(formula, DOWN).scale(0.6)
-        print(self.PDF_normal(1, var_1.value.get_value(), var_5.value.get_value()))
-        # gaussian_fn_1 = grid.plot(
-        #     lambda x: self.PDF_normal(x, var_1.value.get_value(), var_5.value.get_value()))
-        # gaussian_fn_2 = grid.plot(
-        #     lambda x: self.PDF_normal(x, var_3.value.get_value(), var_7.value.get_value()))
-        print(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1))
-        # v_line1 = grid.get_vertical_line(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1))
-        # v_line2 = grid.get_vertical_line(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_3))
-        lines = grid.get_lines_to_point(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1))
-        self.add(lines)
-        self.wait(2)
-        # show point coord
-        # var_1 = Variable(grid.input_to_graph_point(graphs[0].get_x(), gaussian_fn_1), tex_1, num_decimal_places=3).next_to(formula, DOWN).scale(0.6)
+        for i, dot in enumerate(graphs):
+            self.play(dot.animate.set_color(BLUE),)
+            points = grid.p2c([dot.get_x(), dot.get_y(), 0])
+            selected_point = Tex(fr"Selected point: \newline {np.round(points, decimals=2)}", color=BLUE).next_to(formula, DOWN).scale(0.6)
+
+            lines_1 = grid.get_lines_to_point((dot.get_x(), dot.get_y(), 0))
+            self.play(Create(lines_1), Create(selected_point))
+            # self.wait()
+            # show point coord
+            coords_1 = grid.p2c(grid.input_to_graph_point(dot.get_x(), gaussian_curve_1))
+            coords_2 = grid.p2c(grid.input_to_graph_point(dot.get_x(), gaussian_curve_3))
+            intersected_point = Tex(fr"Intersecting point: \newline ("
+                                    fr"{np.round(coords_1, decimals=2)[0]}, "
+                                    fr"{np.round(coords_1, decimals=2)[1]}), "
+                                    fr"({np.round(coords_2, decimals=2)[0]}, "
+                                    fr"{np.round(coords_2, decimals=2)[1]})", color=YELLOW).next_to(selected_point, DOWN).scale(0.6)
+            self.play(Create(intersected_point))
+            if i == 0:
+                self.wait(2)
+            else:
+                continue
+        # var_g_1 = Variable(grid.input_to_graph_point(graphs[0].get_x(), gaussian_curve_1), tex_1, num_decimal_places=3).next_to(formula, DOWN).scale(0.6)
 
 
 class CurseOfDimensionality(Scene):
@@ -451,7 +462,6 @@ class CurseOfDimensionality(Scene):
 
         self.play(
             *[FadeOut(mob) for mob in self.mobjects]
-            # All mobjects in the screen are saved in self.mobjects
         )
 
         plane = NumberPlane(

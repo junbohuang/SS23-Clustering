@@ -1,3 +1,5 @@
+.DS_Store
+partial_movie_files/
 .idea/
 
 *.aux
