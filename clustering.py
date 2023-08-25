@@ -376,7 +376,8 @@ class GMMs(Scene):
                       sigma_1.animate.set_value(random.uniform(0,2)),
                       sigma_2.animate.set_value(random.uniform(0,2)),
                       sigma_3.animate.set_value(random.uniform(0,3)),
-                      sigma_4.animate.set_value(random.uniform(0,2)))
+                      sigma_4.animate.set_value(random.uniform(0,2)),
+                      run_time=10)
 
         self.wait(2)
         self.play(FadeOut(updating_dots))
